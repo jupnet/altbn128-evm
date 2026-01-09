@@ -93,3 +93,16 @@ pub fn expand_evm_signature(signature: &BlsSignature) -> anyhow::Result<Vec<u8>>
     Ok(g1_point.0.to_vec())
 }
 ```
+
+
+```
+Fail (but should pass):
+Aggregated Pubkey: 65HTQ9s2GdhSMyeb7ANmY6r3wLZTVqTBedEoVgKBSzVHnimD5Py55BtHFm1R6NkzUKWUm2MaB97oRhvy6D8WQqH
+Aggregated Singature: CpBiAQGdCt9can81yaquduDDCmV5EQEQfHvi3oy5Xgxd
+Hash: 2rDqbvCW1kq8XTJKNPtPvrdqxmMAxuQD4GBRdRADjZnL (0x1b77a999f2ee6dfdec2c36b00605f62717d8f2cd2df9b8907f885f89a4c8d8b5)
+
+Pass:
+Aggregated Pubkey: 65HTQ9s2GdhSMyeb7ANmY6r3wLZTVqTBedEoVgKBSzVHnimD5Py55BtHFm1R6NkzUKWUm2MaB97oRhvy6D8WQqH
+Aggregated Singature: 9rEJqrPQ3eVxyQWBFWHiAdTx1hJ7FZ1FyMvJgWyTQC9G
+Hash: 7gcHBDmGcA3WGfNNBYRVxS8vGAAAv1yB9NsGvAdhpBux (0x634ba9c05eed0b2cfc51c1b30b4320e4fdc8a5d3958a959317e576d811dbcd7f)
+```
