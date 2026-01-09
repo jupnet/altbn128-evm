@@ -54,3 +54,42 @@ The main contract implementing Alt-BN128 curve operations:
 ## License
 
 UNLICENSED
+
+
+## Issues
+
+Either the verification is wrong or the expansion is wrong
+
+```rs
+/// Aggregates multiple EVM BLS pubkeys
+/// For EVM, we need to aggregate the pubkeys normally first, then adjust the format
+pub fn aggregate_evm_pubkeys(pubkeys: &[String]) -> anyhow::Result<(BlsPubkey, Vec<u8>)> {
+    // First decode and aggregate pubkeys normally
+    let bls_pubkeys: Vec<BlsPubkey> = pubkeys
+        .iter()
+        .map(|pk| decode_bls_pubkey(pk))
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+    // Aggregate using normal BLS aggregation
+    let aggregated_pubkey = aggregate_pubkeys(&bls_pubkeys)?;
+
+    // For EVM, we need to convert to G2Point and back, but preserve the first 64 bytes
+    let mut g2_point = G2Point::try_from(G2CompressedPoint(aggregated_pubkey.to_bytes()))
+        .map_err(|e| anyhow::anyhow!("Failed to convert to G2Point: {:?}", e))?;
+
+    // Overwrite the first 64 bytes with the original aggregated pubkey bytes
+    g2_point.0[..64].copy_from_slice(aggregated_pubkey.as_ref());
+
+    // Return both the original BlsPubkey and the expanded G2Point bytes
+    Ok((aggregated_pubkey, g2_point.0.to_vec()))
+}
+
+```rs
+/// Expands a BLS signature for EVM (from 32 bytes compressed to 64 bytes uncompressed G1 point)
+pub fn expand_evm_signature(signature: &BlsSignature) -> anyhow::Result<Vec<u8>> {
+    let g1_point = G1Point::try_from(&G1CompressedPoint(signature.0))
+        .map_err(|e| anyhow::anyhow!("Failed to convert to G1Point: {:?}", e))?;
+
+    Ok(g1_point.0.to_vec())
+}
+```
