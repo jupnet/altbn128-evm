@@ -49,5 +49,33 @@ describe("AltBn128", function () {
       await expect(altBn128.verifySignature(hash, validPubkey, signature)).to
         .eventually.be.true;
     });
+
+    it("Should succeed but failing", async function () {
+      const { altBn128 } = await loadFixture(deployAltBn128Fixture);
+
+      const hash =
+        "0xf55cad412c9c5a512301b809c228bd8b0fa1853a1cf38a14ae3c5d7ec3001830";
+      const validPubkey =
+        "0x046020e1ad8094d79838eef8c3e42c8a15d01fe56881c0f87e618a5a0119518c266905b38de07d87fcdb612618615b25f71a7ee8e477c52b99fa26a6d5d02ee404a7f06de83e92b329a8e0e07eb4970087bb7c9c889cb5309f012c73f8016dce0b193a88dc1b930cb47d8628ffad3afe3a9578ed87f7e946665ec4e16787c6f8";
+      const signature =
+        "0x214e6d646ef65ad3b0e9b5ca15927b61d5cdf5638a97c904a0a10cf6e51d6ddf2592d4595b6ecbfce779f3d57e230d945fd3df632c57698ac4ec7971a46d7f68"; // 64 bytes
+
+      await expect(altBn128.verifySignature(hash, validPubkey, signature)).to
+        .eventually.be.true;
+    });
+
+    it("Should succeed but failing", async function () {
+      const { altBn128 } = await loadFixture(deployAltBn128Fixture);
+
+      const hash =
+        "0x5bf5f7e1de83a706a19a3c56a5d22157d8e8b07fa2dcef88bae6fc24075e7821";
+      const validPubkey =
+        "0x046020e1ad8094d79838eef8c3e42c8a15d01fe56881c0f87e618a5a0119518c266905b38de07d87fcdb612618615b25f71a7ee8e477c52b99fa26a6d5d02ee404a7f06de83e92b329a8e0e07eb4970087bb7c9c889cb5309f012c73f8016dce0b193a88dc1b930cb47d8628ffad3afe3a9578ed87f7e946665ec4e16787c6f8";
+      const signature =
+        "0x0ef073758583a9751b7810f0b9ded47e3dbea7f771db275978d7e2a170ad299c20048c0b4cb212316e10f82acc56052767cc5d4c4a99fb549e6eaebceb167898"; // 64 bytes
+
+      await expect(altBn128.verifySignature(hash, validPubkey, signature)).to
+        .eventually.be.true;
+    });
   });
 });
