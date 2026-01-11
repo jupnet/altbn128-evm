@@ -2,8 +2,10 @@ use dashu_int::UBig;
 use num_traits::ops::checked::CheckedAdd;
 use rand::{RngCore, rngs::OsRng};
 use solana_alt_bn128_bls::{
-    G1CompressedPoint, G2CompressedPoint, G2Point, MODULUS, PrivKey, Sha256Normalized,
+    G1CompressedPoint, G1Point, G2CompressedPoint, G2Point, MODULUS, PrivKey, Sha256Normalized,
 };
+use std::ops::Add;
+
 pub const BLS_PUBKEY_BYTES: usize = 64;
 
 pub struct BlsKeypair {
@@ -117,6 +119,31 @@ pub fn aggregate(pubkeys: &[&[u8; 64]]) -> Result<[u8; 64], anyhow::Error> {
     Ok(agg_compressed.0)
 }
 
+pub fn aggregate_signatures(signatures: &[[u8; 32]]) -> Result<[u8; 32], anyhow::Error> {
+    if signatures.is_empty() {
+        return Err(anyhow::anyhow!("Invalid signature"));
+    }
+
+    let mut points = Vec::with_capacity(signatures.len());
+    for sig in signatures {
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(sig.as_ref());
+        let g1_comp = G1CompressedPoint(arr);
+        let g1 = G1Point::try_from(&g1_comp).map_err(|_| anyhow::anyhow!("Invalid signature"))?;
+        points.push(g1);
+    }
+
+    let mut agg = points[0].clone();
+    for point in points.into_iter().skip(1) {
+        agg = agg.add(point);
+    }
+
+    let agg_compressed =
+        G1CompressedPoint::try_from(agg).map_err(|_| anyhow::anyhow!("Invalid signature"))?;
+
+    Ok(agg_compressed.0)
+}
+
 pub fn expand_pubkey_with_appended_bytes(aggregated_pubkey: &[u8; 64]) -> anyhow::Result<Vec<u8>> {
     // First decode and aggregate pubkeys normally
 
@@ -135,9 +162,32 @@ pub fn expand_pubkey(aggregated_pubkey: &[u8; 64]) -> anyhow::Result<Vec<u8>> {
     // First decode and aggregate pubkeys normally
 
     // For EVM, we need to convert to G2Point and back, but preserve the first 64 bytes
-    let mut g2_point = G2Point::try_from(G2CompressedPoint(*aggregated_pubkey))
+    let g2_point = G2Point::try_from(G2CompressedPoint(*aggregated_pubkey))
         .map_err(|e| anyhow::anyhow!("Failed to convert to G2Point: {:?}", e))?;
 
     // Return both the original BlsPubkey and the expanded G2Point bytes
     Ok(g2_point.0.to_vec())
+}
+
+pub fn verify_signature(
+    aggregated_pubkey: &[u8; 64],
+    signature: &[u8; 32],
+    hash: &[u8; 32],
+) -> anyhow::Result<()> {
+    let agg_pubkey = G2Point::try_from(G2CompressedPoint(*aggregated_pubkey))
+        .map_err(|e| anyhow::anyhow!("Failed to convert to G2Point: {:?}", e))?;
+    let signature = G1CompressedPoint(*signature);
+
+    agg_pubkey
+        .verify_signature::<Sha256Normalized, _, _>(signature, hash)
+        .map_err(|e| anyhow::anyhow!("Invalid signature: {:?}", e))?;
+    Ok(())
+}
+
+pub fn expand_signature(signature: &[u8; 32]) -> anyhow::Result<Vec<u8>> {
+    let g1_compressed = G1CompressedPoint(*signature);
+    let signature_g1 = G1Point::try_from(&g1_compressed)
+        .map_err(|e| anyhow::anyhow!("Failed to convert to G1Point: {:?}", e))?;
+
+    Ok(signature_g1.0.to_vec())
 }
