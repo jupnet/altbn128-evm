@@ -1,0 +1,16 @@
+[package]
+name = "bls-agg-check"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.95"
+b58 = "0.1.2"
+dashu-int = "0.4.1"
+hex = "0.4.3"
+num-traits = "0.2.19"
+rand = "=0.8.5"
+serde = "1.0.228"
+serde_derive = "1.0.228"
+serde_json = "1.0.149"
+solana-alt-bn128-bls = "0.1.0"

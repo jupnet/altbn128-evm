@@ -37,4 +37,5 @@ Thumbs.db
 dist
 build
 
-.target
+**/target
+**/expand-key-with-evm-check
