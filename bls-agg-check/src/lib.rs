@@ -119,6 +119,11 @@ impl AltBn128 {
             }
 
             let x = hash_val % &self.p;
+            println!("x in hash_to_curve: {}", b58::encode(&x.to_bytes_be()));
+
+            if x.to_bytes_be().len() != 32 {
+                continue;
+            }
             let (found_x, found_y, success) = self.decompress(&x)?;
 
             if success {
@@ -129,6 +134,63 @@ impl AltBn128 {
         Err(AltBn128Error::HashToCurve {
             reason: "No valid point found".to_string(),
         })
+    }
+
+    pub fn hash_to_curve_first_point(
+        &self,
+        message: &[u8; 32],
+    ) -> Result<(BigUint, BigUint, u8), AltBn128Error> {
+        for n in 0u8..255 {
+            let mut hasher = Sha256::new();
+            hasher.update(message);
+            hasher.update([n]);
+            let hash_result = hasher.finalize();
+
+            let hash_val = BigUint::from_bytes_be(&hash_result);
+
+            if hash_val >= self.normalize_modulus {
+                continue;
+            }
+
+            let x = hash_val % &self.p;
+            let (found_x, found_y, success) = self.decompress(&x)?;
+
+            if success {
+                return Ok((found_x, found_y, n));
+            }
+        }
+
+        Err(AltBn128Error::HashToCurve {
+            reason: "No valid point found".to_string(),
+        })
+    }
+
+    pub fn hash_to_curve_all_points(
+        &self,
+        message: &[u8; 32],
+    ) -> Result<Vec<(BigUint, BigUint, u8)>, AltBn128Error> {
+        let mut points = Vec::new();
+        for n in 0u8..255 {
+            let mut hasher = Sha256::new();
+            hasher.update(message);
+            hasher.update([n]);
+            let hash_result = hasher.finalize();
+
+            let hash_val = BigUint::from_bytes_be(&hash_result);
+
+            if hash_val >= self.normalize_modulus {
+                continue;
+            }
+
+            let x = hash_val % &self.p;
+            let (found_x, found_y, success) = self.decompress(&x)?;
+
+            if success {
+                points.push((found_x, found_y, n));
+            }
+        }
+
+        Ok(points)
     }
 
     /// Verify BLS signature using pairing
@@ -150,14 +212,19 @@ impl AltBn128 {
         // Convert coordinates to 32-byte big-endian format
         let x_bytes = self.biguint_to_32_bytes(&x);
         let y_bytes = self.biguint_to_32_bytes(&y);
-
+        println!("x bytes: {}", b58::encode(&x_bytes));
+        println!("y bytes: {}", b58::encode(&y_bytes));
         // Prepare input for pairing precompile
         let mut input = Vec::new();
         input.extend_from_slice(&x_bytes);
         input.extend_from_slice(&y_bytes);
+        println!("pubkey: {}", b58::encode(pubkey));
         input.extend_from_slice(pubkey);
+        println!("signature: {}", b58::encode(signature));
         input.extend_from_slice(signature);
+        println!("neg_g2: {}", b58::encode(&self.neg_g2));
         input.extend_from_slice(&self.neg_g2);
+        println!("input: {}", b58::encode(&input));
 
         // In a real implementation, this would call the pairing precompile
         // For now, we'll simulate the pairing check

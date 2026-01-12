@@ -57,13 +57,38 @@ contract AltBn128 {
         }
     }
 
-    function hashToCurve(bytes32 message_) public view returns (uint x, uint y) {
+    function hashToCurve(
+        bytes32 message_
+    ) public view returns (uint x, uint y) {
         for (uint8 n = 0; n < 255; n++) {
             uint hashVal = uint(sha256(abi.encodePacked(message_, n)));
 
             if (hashVal >= NORMALIZE_MODULUS) {
                 continue;
             }
+
+            uint x = hashVal % P;
+            // convert x to big endian bytes
+            bytes memory xBytes;
+            unchecked {
+                uint xTemp = x;
+                uint msb = 0;
+                for (uint i = 0; i < 32; i++) {
+                    if ((xTemp >> (8 * (31 - i))) & 0xff != 0) {
+                        msb = i;
+                        break;
+                    }
+                }
+                uint len = 32 - msb;
+                xBytes = new bytes(len);
+                for (uint i = 0; i < len; i++) {
+                    xBytes[i] = bytes1(uint8(x >> (8 * (len - i - 1))));
+                }
+            }
+            if (xBytes.length != 32) {
+                continue;
+            }
+
             (uint foundX, uint foundY, bool success) = decompress(hashVal % P);
 
             if (success) {

@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
 
 use bls_agg_check::AltBn128;
+use num_bigint::BigUint;
 use serde_derive::{Deserialize, Serialize};
 
 const KEYPAIR_FILE: &str = "keypairs.json";
@@ -57,6 +58,10 @@ fn main() {
             println!("Error: {}", e);
         }
         run_test_cases(&loaded_keypairs).unwrap();
+
+        // Compare hash-to-curve methods
+        // compare_hash_to_curve_methods();
+
         return;
     }
     loop {
@@ -102,6 +107,7 @@ pub fn run_test_cases(keypairs: &Vec<bls::BlsKeypair>) -> io::Result<()> {
         println!("================================================");
         println!("Hash: {:?}", b58::encode(&hash));
         println!("Hash as hex: {}", hex::encode(&hash));
+
         println!("");
         let mut signatures = Vec::new();
         for keypair in keypairs {
@@ -113,11 +119,79 @@ pub fn run_test_cases(keypairs: &Vec<bls::BlsKeypair>) -> io::Result<()> {
             "Aggregate signature: {:?}",
             b58::encode(&aggregate_signature)
         );
+
         println!(
             "Aggregate signature as hex: {}",
             hex::encode(&aggregate_signature)
         );
         println!("");
+        // println!("================================================");
+        let (hash_to_curve_bytes, counter) = bls::get_hash_to_curve_bytes(&hash).unwrap();
+        let x = &hash_to_curve_bytes[..32];
+        let y = &hash_to_curve_bytes[32..];
+        println!("x: {}", b58::encode(&x));
+        println!("y: {}", b58::encode(&y));
+        println!("counter: {}", counter);
+        // let result = bls::verify_signature_at_specific_point(
+        //     &aggregate_signature,
+        //     &hash_to_curve_bytes,
+        //     &aggregate_pubkey,
+        // );
+
+        // if result.is_err() {
+        //     println!("Error: {}", result.unwrap_err());
+        // } else {
+        //     println!("Signature verified");
+        // }
+        // println!("counter: {}", counter);
+        // println!("x: {}", b58::encode(&x));
+        // println!("y: {}", b58::encode(&y));
+        // let altbn128 = AltBn128::new();
+
+        // let (hash_to_curve_x, hash_to_curve_y, hash_to_curve_counter) =
+        //     altbn128.hash_to_curve_first_point(&hash).unwrap();
+
+        // println!("hash_to_curve_counter: {}", hash_to_curve_counter);
+        // println!(
+        //     "hash_to_curve_x: {}",
+        //     b58::encode(&hash_to_curve_x.to_bytes_be())
+        // );
+        // println!(
+        //     "hash_to_curve_y: {}",
+        //     b58::encode(&hash_to_curve_y.to_bytes_be())
+        // );
+        // println!(
+        //     "length of hash_to_curve_x: {}",
+        //     hash_to_curve_x.to_bytes_be().len()
+        // );
+        // println!(
+        //     "length of hash_to_curve_y: {}",
+        //     hash_to_curve_y.to_bytes_be().len()
+        // );
+
+        // if let Ok((_xy, hash_to_curve_counter)) =
+        //     bls::get_hash_to_curve_at_specific_point(&hash, hash_to_curve_counter)
+        // {
+        //     println!("Point found: counter: {}", hash_to_curve_counter);
+        // } else {
+        //     println!(
+        //         "Error getting hash to curve at specific point for counter: {}",
+        //         hash_to_curve_counter
+        //     );
+        // }
+
+        // let points = altbn128.hash_to_curve_all_points(&hash).unwrap();
+        // for point in points {
+        //     if point.0 == BigUint::from_bytes_be(x) && point.1 == BigUint::from_bytes_be(y) {
+        //         println!("Point found: counter: {}", point.2);
+        //         println!("Point found: {}", b58::encode(&point.0.to_bytes_be()));
+        //         println!("Point found: {}", b58::encode(&point.1.to_bytes_be()));
+        //         break;
+        //     }
+        // }
+        // println!("================================================");
+        let result = bls::verify_signature(&aggregate_pubkey, &aggregate_signature, &hash);
+
         let expanded_signature = bls::expand_signature(&aggregate_signature).unwrap();
         println!("Expanded signature: {:?}", b58::encode(&expanded_signature));
         println!(
@@ -125,7 +199,6 @@ pub fn run_test_cases(keypairs: &Vec<bls::BlsKeypair>) -> io::Result<()> {
             hex::encode(&expanded_signature)
         );
         println!("");
-        let result = bls::verify_signature(&aggregate_pubkey, &aggregate_signature, &hash);
         let verification_result = if result.is_err() {
             println!("Invalid signature");
             false
@@ -134,19 +207,7 @@ pub fn run_test_cases(keypairs: &Vec<bls::BlsKeypair>) -> io::Result<()> {
             true
         };
         println!("");
-        println!("Checking AltBn128 verification with expanded pubkey with appended bytes...");
-        let altbn128_result = check_altbn128(
-            &expanded_pubkey_with_appended_bytes,
-            &expanded_signature,
-            &hash,
-            verification_result,
-        );
-        if altbn128_result.is_err() {
-            let error = altbn128_result.unwrap_err();
-            println!("Error: {}", error);
-        }
 
-        println!("");
         println!("Checking AltBn128 verification with expanded pubkey...");
         let altbn128_result = check_altbn128(
             &expanded_pubkey,
